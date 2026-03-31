@@ -1,6 +1,7 @@
 package com.hms.appointment.controller;
 
 import com.hms.appointment.dto.AppointmentDTO;
+import com.hms.appointment.dto.AppointmentRequestDTO;
 import com.hms.appointment.service.AppointmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,7 +23,7 @@ import java.util.Map;
  *
  * Base URL: /appointments
  * Full URL (via gateway): http://localhost:8080/appointments
- * Direct URL:             http://localhost:8083/appointments
+ * Direct URL: http://localhost:8083/appointments
  */
 @RestController
 @RequestMapping("/appointments")
@@ -39,9 +40,9 @@ public class AppointmentController {
     // =============================================
     @PostMapping
     @Operation(summary = "Create a new appointment",
-               description = "Books a new appointment. patientId and doctorId are required.")
-    public ResponseEntity<AppointmentDTO> createAppointment(@RequestBody AppointmentDTO dto) {
-        AppointmentDTO created = appointmentService.createAppointment(dto);
+            description = "Books a new appointment. Provide patientId, doctorId, appointmentDate (yyyy-MM-dd), and appointmentTime (HH:mm:ss). Names are auto-fetched from other services.")
+    public ResponseEntity<AppointmentDTO> createAppointment(@RequestBody AppointmentRequestDTO request) {
+        AppointmentDTO created = appointmentService.createAppointment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -76,13 +77,12 @@ public class AppointmentController {
     // Update an existing appointment
     // =============================================
     @PutMapping("/{id}")
-    @Operation(summary = "Update an appointment",
-               description = "Update appointment details. Only fields provided will be updated.")
+    @Operation(summary = "Update an appointment", description = "Update appointment fields. Only fields provided will be updated. Names are re-fetched automatically if IDs change.")
     public ResponseEntity<?> updateAppointment(
             @PathVariable Long id,
-            @RequestBody AppointmentDTO dto) {
+            @RequestBody AppointmentRequestDTO request) {
         try {
-            return ResponseEntity.ok(appointmentService.updateAppointment(id, dto));
+            return ResponseEntity.ok(appointmentService.updateAppointment(id, request));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(errorResponse(e.getMessage()));
@@ -112,8 +112,7 @@ public class AppointmentController {
     // Get all appointments for a specific patient
     // =============================================
     @GetMapping("/patient/{patientId}")
-    @Operation(summary = "Get appointments by patient ID",
-               description = "Returns all appointments for a given patient")
+    @Operation(summary = "Get appointments by patient ID", description = "Returns all appointments for a given patient")
     public ResponseEntity<List<AppointmentDTO>> getByPatient(
             @Parameter(description = "Patient ID from Patient Service") @PathVariable Long patientId) {
         return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientId));
@@ -124,8 +123,7 @@ public class AppointmentController {
     // Get all appointments for a specific doctor
     // =============================================
     @GetMapping("/doctor/{doctorId}")
-    @Operation(summary = "Get appointments by doctor ID",
-               description = "Returns all appointments assigned to a given doctor")
+    @Operation(summary = "Get appointments by doctor ID", description = "Returns all appointments assigned to a given doctor")
     public ResponseEntity<List<AppointmentDTO>> getByDoctor(
             @Parameter(description = "Doctor ID from Doctor Service") @PathVariable Long doctorId) {
         return ResponseEntity.ok(appointmentService.getAppointmentsByDoctor(doctorId));
@@ -146,8 +144,7 @@ public class AppointmentController {
     // Get appointments by status
     // =============================================
     @GetMapping("/status/{status}")
-    @Operation(summary = "Get appointments by status",
-               description = "Status values: SCHEDULED | COMPLETED | CANCELLED | NO_SHOW")
+    @Operation(summary = "Get appointments by status", description = "Status values: SCHEDULED | COMPLETED | CANCELLED | NO_SHOW")
     public ResponseEntity<List<AppointmentDTO>> getByStatus(
             @Parameter(description = "Appointment status") @PathVariable String status) {
         return ResponseEntity.ok(appointmentService.getAppointmentsByStatus(status));
@@ -158,11 +155,9 @@ public class AppointmentController {
     // Get appointments on a specific date
     // =============================================
     @GetMapping("/date/{date}")
-    @Operation(summary = "Get appointments by date",
-               description = "Date format: YYYY-MM-DD  (e.g. 2025-04-15)")
+    @Operation(summary = "Get appointments by date", description = "Date format: YYYY-MM-DD  (e.g. 2025-04-15)")
     public ResponseEntity<List<AppointmentDTO>> getByDate(
-            @Parameter(description = "Date in YYYY-MM-DD format")
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @Parameter(description = "Date in YYYY-MM-DD format") @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(appointmentService.getAppointmentsByDate(date));
     }
 

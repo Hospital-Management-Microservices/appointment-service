@@ -2,6 +2,7 @@ package com.hms.appointment.service;
 
 import com.hms.appointment.client.ExternalServiceClient;
 import com.hms.appointment.dto.AppointmentDTO;
+import com.hms.appointment.dto.AppointmentRequestDTO;
 import com.hms.appointment.model.Appointment;
 import com.hms.appointment.repository.AppointmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,33 +29,33 @@ public class AppointmentService {
     // =============================================
     // CREATE a new appointment
     // =============================================
-    public AppointmentDTO createAppointment(AppointmentDTO dto) {
+    public AppointmentDTO createAppointment(AppointmentRequestDTO request) {
         Appointment appointment = new Appointment();
 
-        appointment.setPatientId(dto.getPatientId());
-        appointment.setDoctorId(dto.getDoctorId());
-        appointment.setDepartmentId(dto.getDepartmentId());
-        appointment.setAppointmentDate(dto.getAppointmentDate());
-        appointment.setAppointmentTime(dto.getAppointmentTime());
-        appointment.setReason(dto.getReason());
-        appointment.setNotes(dto.getNotes());
-        appointment.setStatus(dto.getStatus() != null ? dto.getStatus() : "SCHEDULED");
+        appointment.setPatientId(request.getPatientId());
+        appointment.setDoctorId(request.getDoctorId());
+        appointment.setDepartmentId(request.getDepartmentId());
+        appointment.setAppointmentDate(request.getAppointmentDate());
+        appointment.setAppointmentTime(request.getAppointmentTime());
+        appointment.setReason(request.getReason());
+        appointment.setNotes(request.getNotes());
+        appointment.setStatus(request.getStatus() != null ? request.getStatus() : "SCHEDULED");
 
-        // Try to fetch names from other services
-        // If a service is down, we still save — just with null name
-        if (dto.getPatientId() != null) {
-            String patientName = externalServiceClient.getPatientName(dto.getPatientId());
-            appointment.setPatientName(patientName != null ? patientName : dto.getPatientName());
+        // Auto-fetch names from other microservices via RestTemplate.
+        // If a service is down, we still save — just with a null name (graceful degradation).
+        if (request.getPatientId() != null) {
+            String patientName = externalServiceClient.getPatientName(request.getPatientId());
+            appointment.setPatientName(patientName);
         }
 
-        if (dto.getDoctorId() != null) {
-            String doctorName = externalServiceClient.getDoctorName(dto.getDoctorId());
-            appointment.setDoctorName(doctorName != null ? doctorName : dto.getDoctorName());
+        if (request.getDoctorId() != null) {
+            String doctorName = externalServiceClient.getDoctorName(request.getDoctorId());
+            appointment.setDoctorName(doctorName);
         }
 
-        if (dto.getDepartmentId() != null) {
-            String departmentName = externalServiceClient.getDepartmentName(dto.getDepartmentId());
-            appointment.setDepartmentName(departmentName != null ? departmentName : dto.getDepartmentName());
+        if (request.getDepartmentId() != null) {
+            String departmentName = externalServiceClient.getDepartmentName(request.getDepartmentId());
+            appointment.setDepartmentName(departmentName);
         }
 
         Appointment saved = appointmentRepository.save(appointment);
@@ -85,7 +86,7 @@ public class AppointmentService {
     // =============================================
     // UPDATE an appointment
     // =============================================
-    public AppointmentDTO updateAppointment(Long id, AppointmentDTO dto) {
+    public AppointmentDTO updateAppointment(Long id, AppointmentRequestDTO request) {
         Optional<Appointment> optional = appointmentRepository.findById(id);
         if (optional.isEmpty()) {
             throw new RuntimeException("Appointment not found with ID: " + id);
@@ -93,30 +94,30 @@ public class AppointmentService {
 
         Appointment appointment = optional.get();
 
-        // Update fields if provided
-        if (dto.getPatientId() != null) {
-            appointment.setPatientId(dto.getPatientId());
-            String patientName = externalServiceClient.getPatientName(dto.getPatientId());
-            appointment.setPatientName(patientName != null ? patientName : dto.getPatientName());
+        // Update fields only if provided in the request (partial update support)
+        if (request.getPatientId() != null) {
+            appointment.setPatientId(request.getPatientId());
+            String patientName = externalServiceClient.getPatientName(request.getPatientId());
+            appointment.setPatientName(patientName);
         }
 
-        if (dto.getDoctorId() != null) {
-            appointment.setDoctorId(dto.getDoctorId());
-            String doctorName = externalServiceClient.getDoctorName(dto.getDoctorId());
-            appointment.setDoctorName(doctorName != null ? doctorName : dto.getDoctorName());
+        if (request.getDoctorId() != null) {
+            appointment.setDoctorId(request.getDoctorId());
+            String doctorName = externalServiceClient.getDoctorName(request.getDoctorId());
+            appointment.setDoctorName(doctorName);
         }
 
-        if (dto.getDepartmentId() != null) {
-            appointment.setDepartmentId(dto.getDepartmentId());
-            String departmentName = externalServiceClient.getDepartmentName(dto.getDepartmentId());
-            appointment.setDepartmentName(departmentName != null ? departmentName : dto.getDepartmentName());
+        if (request.getDepartmentId() != null) {
+            appointment.setDepartmentId(request.getDepartmentId());
+            String departmentName = externalServiceClient.getDepartmentName(request.getDepartmentId());
+            appointment.setDepartmentName(departmentName);
         }
 
-        if (dto.getAppointmentDate() != null)  appointment.setAppointmentDate(dto.getAppointmentDate());
-        if (dto.getAppointmentTime() != null)  appointment.setAppointmentTime(dto.getAppointmentTime());
-        if (dto.getStatus() != null)           appointment.setStatus(dto.getStatus());
-        if (dto.getReason() != null)           appointment.setReason(dto.getReason());
-        if (dto.getNotes() != null)            appointment.setNotes(dto.getNotes());
+        if (request.getAppointmentDate() != null)  appointment.setAppointmentDate(request.getAppointmentDate());
+        if (request.getAppointmentTime() != null)  appointment.setAppointmentTime(request.getAppointmentTime());
+        if (request.getStatus() != null)           appointment.setStatus(request.getStatus());
+        if (request.getReason() != null)           appointment.setReason(request.getReason());
+        if (request.getNotes() != null)            appointment.setNotes(request.getNotes());
 
         Appointment updated = appointmentRepository.save(appointment);
         return convertToDTO(updated);
